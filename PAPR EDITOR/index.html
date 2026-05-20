@@ -35,6 +35,13 @@
             { name: 'Kelabu Gelap', value: ['#434343', '#000000'] }
         ];
 
+        const defaultMediaConfigs = [
+            { zoom: 1, panX: 0, panY: 0 },
+            { zoom: 1, panX: 0, panY: 0 },
+            { zoom: 1, panX: 0, panY: 0 },
+            { zoom: 1, panX: 0, panY: 0 }
+        ];
+
         function App() {
             // State Aplikasi
             const [bgGradient, setBgGradient] = useState(gradients[0].value);
@@ -44,11 +51,12 @@
             const [isPlaying, setIsPlaying] = useState(false);
             const mediaElementsRef = useRef([]); 
             const [mediaProps, setMediaProps] = useState({ x: 480, y: 360, scale: 1 }); 
+            const [mediaConfigs, setMediaConfigs] = useState(defaultMediaConfigs);
 
             // State Bulatan Fokus Berbilang (Max 5)
             const [circles, setCircles] = useState([]);
 
-            // State Inset (Gambar Kecil) - Tambah prop scale, panX, panY untuk kawalan imej dalam
+            // State Inset (Gambar Kecil)
             const [showInset, setShowInset] = useState(false);
             const insetRef = useRef(null);
             const [insetProps, setInsetProps] = useState({ x: 800, y: 150, radius: 80, scale: 1, panX: 0, panY: 0 });
@@ -79,12 +87,12 @@
 
             // Rujukan State untuk Gelung Animasi
             const stateRef = useRef({
-                bgGradient, mediaProps, circles, showInset, insetProps, showArrow, arrowProps, mediaType
+                bgGradient, mediaProps, mediaConfigs, circles, showInset, insetProps, showArrow, arrowProps, mediaType
             });
 
             useEffect(() => {
-                stateRef.current = { bgGradient, mediaProps, circles, showInset, insetProps, showArrow, arrowProps, mediaType };
-            }, [bgGradient, mediaProps, circles, showInset, insetProps, showArrow, arrowProps, mediaType]);
+                stateRef.current = { bgGradient, mediaProps, mediaConfigs, circles, showInset, insetProps, showArrow, arrowProps, mediaType };
+            }, [bgGradient, mediaProps, mediaConfigs, circles, showInset, insetProps, showArrow, arrowProps, mediaType]);
 
             // Muat Rekod dari Local Storage semasa dimulakan
             useEffect(() => {
@@ -98,7 +106,7 @@
             useEffect(() => {
                 let animationFrameId;
 
-                const drawCover = (ctx, img, x, y, w, h) => {
+                const drawCover = (ctx, img, x, y, w, h, config = {zoom: 1, panX: 0, panY: 0}) => {
                     const imgRatio = img.width / img.height;
                     const boxRatio = w / h;
                     let renderW, renderH, offsetX = 0, offsetY = 0;
@@ -113,11 +121,19 @@
                         offsetY = (h - renderH) / 2;
                     }
 
+                    // Terapkan fungsi Zoom
+                    const finalW = renderW * config.zoom;
+                    const finalH = renderH * config.zoom;
+                    
+                    // Terapkan offset (Pan) dan pastikan ia kekal di tengah bila di zoom
+                    const finalOffsetX = offsetX - (finalW - renderW) / 2 + config.panX;
+                    const finalOffsetY = offsetY - (finalH - renderH) / 2 + config.panY;
+
                     ctx.save();
                     ctx.beginPath();
                     ctx.rect(x, y, w, h);
                     ctx.clip();
-                    ctx.drawImage(img, x + offsetX, y + offsetY, renderW, renderH);
+                    ctx.drawImage(img, x + finalOffsetX, y + finalOffsetY, finalW, finalH);
                     ctx.restore();
                 };
 
@@ -148,23 +164,30 @@
                             const gap = 10; 
 
                             if (mediaArr.length === 2) {
-                                drawCover(ctx, mediaArr[0], -W/2, -H/2, W/2 - gap/2, H);
-                                drawCover(ctx, mediaArr[1], gap/2, -H/2, W/2 - gap/2, H);
+                                drawCover(ctx, mediaArr[0], -W/2, -H/2, W/2 - gap/2, H, state.mediaConfigs[0]);
+                                drawCover(ctx, mediaArr[1], gap/2, -H/2, W/2 - gap/2, H, state.mediaConfigs[1]);
                             } else if (mediaArr.length === 3) {
-                                drawCover(ctx, mediaArr[0], -W/2, -H/2, W/2 - gap/2, H/2 - gap/2);
-                                drawCover(ctx, mediaArr[1], gap/2, -H/2, W/2 - gap/2, H/2 - gap/2);
-                                drawCover(ctx, mediaArr[2], -W/2, gap/2, W, H/2 - gap/2);
+                                drawCover(ctx, mediaArr[0], -W/2, -H/2, W/2 - gap/2, H/2 - gap/2, state.mediaConfigs[0]);
+                                drawCover(ctx, mediaArr[1], gap/2, -H/2, W/2 - gap/2, H/2 - gap/2, state.mediaConfigs[1]);
+                                drawCover(ctx, mediaArr[2], -W/2, gap/2, W, H/2 - gap/2, state.mediaConfigs[2]);
                             } else if (mediaArr.length >= 4) {
-                                drawCover(ctx, mediaArr[0], -W/2, -H/2, W/2 - gap/2, H/2 - gap/2);
-                                drawCover(ctx, mediaArr[1], gap/2, -H/2, W/2 - gap/2, H/2 - gap/2);
-                                drawCover(ctx, mediaArr[2], -W/2, gap/2, W/2 - gap/2, H/2 - gap/2);
-                                drawCover(ctx, mediaArr[3], gap/2, gap/2, W/2 - gap/2, H/2 - gap/2);
+                                drawCover(ctx, mediaArr[0], -W/2, -H/2, W/2 - gap/2, H/2 - gap/2, state.mediaConfigs[0]);
+                                drawCover(ctx, mediaArr[1], gap/2, -H/2, W/2 - gap/2, H/2 - gap/2, state.mediaConfigs[1]);
+                                drawCover(ctx, mediaArr[2], -W/2, gap/2, W/2 - gap/2, H/2 - gap/2, state.mediaConfigs[2]);
+                                drawCover(ctx, mediaArr[3], gap/2, gap/2, W/2 - gap/2, H/2 - gap/2, state.mediaConfigs[3]);
                             }
                         } else {
                             const m = mediaArr[0];
                             const dims = m.videoWidth ? { w: m.videoWidth, h: m.videoHeight } : { w: m.width, h: m.height };
                             if (dims.w > 0) {
-                                ctx.drawImage(m, -dims.w / 2, -dims.h / 2, dims.w, dims.h);
+                                // Guna configurasi media ke-0 juga untuk fungsi zoom jika cuma 1 gambar
+                                const conf = state.mediaConfigs[0];
+                                const finalW = dims.w * conf.zoom;
+                                const finalH = dims.h * conf.zoom;
+                                const offsetX = -finalW / 2 + conf.panX;
+                                const offsetY = -finalH / 2 + conf.panY;
+                                
+                                ctx.drawImage(m, offsetX, offsetY, finalW, finalH);
                             }
                         }
                         ctx.restore();
@@ -283,6 +306,7 @@
                     title: generatedTitle,
                     bgGradient,
                     mediaProps,
+                    mediaConfigs, // Simpan rekod zoom kolaj
                     circles,
                     showInset,
                     insetProps,
@@ -303,6 +327,7 @@
                 }
                 setBgGradient(rec.bgGradient);
                 setMediaProps(rec.mediaProps || { x: 480, y: 360, scale: 1 });
+                setMediaConfigs(rec.mediaConfigs || defaultMediaConfigs);
                 setCircles(rec.circles || []);
                 setShowInset(rec.showInset || false);
                 setInsetProps(rec.insetProps || { x: 800, y: 150, radius: 80, scale: 1, panX: 0, panY: 0 });
@@ -337,6 +362,7 @@
                     setMediaType(null);
                     mediaElementsRef.current = [];
                     setMediaProps({ x: 480, y: 360, scale: 1 });
+                    setMediaConfigs(defaultMediaConfigs);
                     setCircles([]);
                     setShowInset(false);
                     insetRef.current = null;
@@ -369,6 +395,9 @@
                 const files = Array.from(e.target.files).slice(0, 4); 
                 if (files.length === 0) return;
                 
+                // Reset zoom configs bila upload baru
+                setMediaConfigs(defaultMediaConfigs);
+
                 const hasVideo = files.some(f => f.type.startsWith('video/'));
 
                 if (hasVideo) {
@@ -477,6 +506,9 @@
 
                 if (activeLayer === 'media') {
                     setMediaProps(prev => ({ ...prev, x: prev.x + dx, y: prev.y + dy }));
+                } else if (activeLayer.startsWith('media-')) {
+                    const idx = parseInt(activeLayer.replace('media-', ''));
+                    setMediaConfigs(prev => prev.map((c, i) => i === idx ? { ...c, panX: c.panX + dx, panY: c.panY + dy } : c));
                 } else if (activeLayer.startsWith('circle-')) {
                     const circleId = activeLayer.replace('circle-', '');
                     setCircles(prev => prev.map(c => c.id === circleId ? { ...c, x: c.x + dx, y: c.y + dy } : c));
@@ -764,7 +796,18 @@
                                     <button 
                                         onClick={() => setActiveLayer('media')}
                                         className={`flex-1 min-w-[60px] text-xs py-2 rounded-md font-medium transition ${activeLayer === 'media' ? 'bg-white shadow text-gray-800' : 'text-gray-500'}`}
-                                    >Media</button>
+                                    >Media (Semua)</button>
+                                    
+                                    {/* Butang kawalan Zoom untuk gambar yang dikolaj */}
+                                    {mediaElementsRef.current.map((_, index) => (
+                                        <button 
+                                            key={`media-${index}`}
+                                            onClick={() => setActiveLayer(`media-${index}`)}
+                                            className={`flex-1 min-w-[60px] text-xs py-2 rounded-md font-medium transition ${activeLayer === `media-${index}` ? 'bg-white shadow text-blue-700' : 'text-gray-500'}`}
+                                        >
+                                            Gambar {index + 1}
+                                        </button>
+                                    ))}
                                     
                                     {/* Generate butang bulatan secara dinamik */}
                                     {circles.map((circle, index) => (
@@ -800,11 +843,11 @@
                                         </button>
                                     )}
 
-                                    {activeLayer !== 'arrow' && activeLayer !== 'inset' && (
+                                    {activeLayer !== 'arrow' && activeLayer !== 'inset' && !activeLayer.startsWith('media-') && (
                                         <>
                                             <label className="flex justify-between text-xs text-gray-500 mb-1">
                                                 <span>Saiz / Skala bagi: <strong className="text-gray-700 capitalize">
-                                                    {activeLayer.startsWith('circle-') ? 'bulatan aktif' : activeLayer}
+                                                    {activeLayer.startsWith('circle-') ? 'bulatan aktif' : 'Media Keseluruhan'}
                                                 </strong></span>
                                             </label>
                                             
@@ -830,7 +873,58 @@
                                         </>
                                     )}
 
-                                    {/* Slider Khusus Untuk Zoom Layer */}
+                                    {/* Slider Khusus Untuk Zoom/Pan Gambar Individu (Kolaj) */}
+                                    {activeLayer.startsWith('media-') && (
+                                        <div className="space-y-4 mt-2">
+                                            <div>
+                                                <label className="flex justify-between text-xs text-blue-700 mb-1 font-semibold">Zoom Gambar {parseInt(activeLayer.split('-')[1]) + 1}</label>
+                                                <input type="range" min="1" max="5" step="0.1" 
+                                                    className="w-full accent-blue-600"
+                                                    value={mediaConfigs[parseInt(activeLayer.split('-')[1])].zoom} 
+                                                    onChange={(e) => {
+                                                        const idx = parseInt(activeLayer.split('-')[1]);
+                                                        setMediaConfigs(prev => {
+                                                            const newArr = [...prev];
+                                                            newArr[idx] = { ...newArr[idx], zoom: parseFloat(e.target.value) };
+                                                            return newArr;
+                                                        });
+                                                    }} 
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="flex justify-between text-xs text-indigo-600 mb-1 font-medium">Gerak Kiri / Kanan Gambar</label>
+                                                <input type="range" min="-500" max="500" step="1" 
+                                                    className="w-full accent-indigo-500"
+                                                    value={mediaConfigs[parseInt(activeLayer.split('-')[1])].panX} 
+                                                    onChange={(e) => {
+                                                        const idx = parseInt(activeLayer.split('-')[1]);
+                                                        setMediaConfigs(prev => {
+                                                            const newArr = [...prev];
+                                                            newArr[idx] = { ...newArr[idx], panX: parseFloat(e.target.value) };
+                                                            return newArr;
+                                                        });
+                                                    }} 
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="flex justify-between text-xs text-indigo-600 mb-1 font-medium">Gerak Atas / Bawah Gambar</label>
+                                                <input type="range" min="-500" max="500" step="1" 
+                                                    className="w-full accent-indigo-500"
+                                                    value={mediaConfigs[parseInt(activeLayer.split('-')[1])].panY} 
+                                                    onChange={(e) => {
+                                                        const idx = parseInt(activeLayer.split('-')[1]);
+                                                        setMediaConfigs(prev => {
+                                                            const newArr = [...prev];
+                                                            newArr[idx] = { ...newArr[idx], panY: parseFloat(e.target.value) };
+                                                            return newArr;
+                                                        });
+                                                    }} 
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Slider Khusus Untuk Zoom Layer Gambar Kecil */}
                                     {activeLayer === 'inset' && (
                                         <div className="space-y-4 mt-2">
                                             <div>
