@@ -107,12 +107,12 @@
                 let animationFrameId;
 
                 const drawCover = (ctx, img, x, y, w, h, config = {zoom: 1, panX: 0, panY: 0}) => {
-                    if(!img) return;
+                    if(!img) return; // Pelindung jika imej/video tiada
                     
                     const imgW = img.videoWidth || img.width;
                     const imgH = img.videoHeight || img.height;
                     
-                    if (!imgW || !imgH) return;
+                    if (!imgW || !imgH) return; // Tunggu sehingga imej/video ada dimensi
 
                     const imgRatio = imgW / imgH;
                     const boxRatio = w / h;
