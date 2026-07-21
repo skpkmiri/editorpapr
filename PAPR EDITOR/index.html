@@ -9,7 +9,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- Babel untuk membaca kod React (JSX) secara terus di dalam pelayar -->
-    <script src="https://unpkg.com/@babel/standalone@7.23.0/babel.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -107,17 +107,24 @@
                 let animationFrameId;
 
                 const drawCover = (ctx, img, x, y, w, h, config = {zoom: 1, panX: 0, panY: 0}) => {
-                    const imgRatio = img.width / img.height;
+                    if(!img) return;
+                    
+                    const imgW = img.videoWidth || img.width;
+                    const imgH = img.videoHeight || img.height;
+                    
+                    if (!imgW || !imgH) return;
+
+                    const imgRatio = imgW / imgH;
                     const boxRatio = w / h;
                     let renderW, renderH, offsetX = 0, offsetY = 0;
 
                     if (imgRatio > boxRatio) {
                         renderH = h;
-                        renderW = img.width * (h / img.height);
+                        renderW = imgW * (h / imgH);
                         offsetX = (w - renderW) / 2;
                     } else {
                         renderW = w;
-                        renderH = img.height * (w / img.width);
+                        renderH = imgH * (w / imgW);
                         offsetY = (h - renderH) / 2;
                     }
 
@@ -164,24 +171,24 @@
                             const gap = 10; 
 
                             if (mediaArr.length === 2) {
-                                drawCover(ctx, mediaArr[0], -W/2, -H/2, W/2 - gap/2, H, state.mediaConfigs[0]);
-                                drawCover(ctx, mediaArr[1], gap/2, -H/2, W/2 - gap/2, H, state.mediaConfigs[1]);
+                                drawCover(ctx, mediaArr[0], -W/2, -H/2, W/2 - gap/2, H, state.mediaConfigs[0] || defaultMediaConfigs[0]);
+                                drawCover(ctx, mediaArr[1], gap/2, -H/2, W/2 - gap/2, H, state.mediaConfigs[1] || defaultMediaConfigs[1]);
                             } else if (mediaArr.length === 3) {
-                                drawCover(ctx, mediaArr[0], -W/2, -H/2, W/2 - gap/2, H/2 - gap/2, state.mediaConfigs[0]);
-                                drawCover(ctx, mediaArr[1], gap/2, -H/2, W/2 - gap/2, H/2 - gap/2, state.mediaConfigs[1]);
-                                drawCover(ctx, mediaArr[2], -W/2, gap/2, W, H/2 - gap/2, state.mediaConfigs[2]);
+                                drawCover(ctx, mediaArr[0], -W/2, -H/2, W/2 - gap/2, H/2 - gap/2, state.mediaConfigs[0] || defaultMediaConfigs[0]);
+                                drawCover(ctx, mediaArr[1], gap/2, -H/2, W/2 - gap/2, H/2 - gap/2, state.mediaConfigs[1] || defaultMediaConfigs[1]);
+                                drawCover(ctx, mediaArr[2], -W/2, gap/2, W, H/2 - gap/2, state.mediaConfigs[2] || defaultMediaConfigs[2]);
                             } else if (mediaArr.length >= 4) {
-                                drawCover(ctx, mediaArr[0], -W/2, -H/2, W/2 - gap/2, H/2 - gap/2, state.mediaConfigs[0]);
-                                drawCover(ctx, mediaArr[1], gap/2, -H/2, W/2 - gap/2, H/2 - gap/2, state.mediaConfigs[1]);
-                                drawCover(ctx, mediaArr[2], -W/2, gap/2, W/2 - gap/2, H/2 - gap/2, state.mediaConfigs[2]);
-                                drawCover(ctx, mediaArr[3], gap/2, gap/2, W/2 - gap/2, H/2 - gap/2, state.mediaConfigs[3]);
+                                drawCover(ctx, mediaArr[0], -W/2, -H/2, W/2 - gap/2, H/2 - gap/2, state.mediaConfigs[0] || defaultMediaConfigs[0]);
+                                drawCover(ctx, mediaArr[1], gap/2, -H/2, W/2 - gap/2, H/2 - gap/2, state.mediaConfigs[1] || defaultMediaConfigs[1]);
+                                drawCover(ctx, mediaArr[2], -W/2, gap/2, W/2 - gap/2, H/2 - gap/2, state.mediaConfigs[2] || defaultMediaConfigs[2]);
+                                drawCover(ctx, mediaArr[3], gap/2, gap/2, W/2 - gap/2, H/2 - gap/2, state.mediaConfigs[3] || defaultMediaConfigs[3]);
                             }
                         } else {
                             const m = mediaArr[0];
                             const dims = m.videoWidth ? { w: m.videoWidth, h: m.videoHeight } : { w: m.width, h: m.height };
                             if (dims.w > 0) {
-                                // Guna configurasi media ke-0 juga untuk fungsi zoom jika cuma 1 gambar
-                                const conf = state.mediaConfigs[0];
+                                // Guna configurasi media ke-0 juga untuk fungsi zoom jika cuma 1 gambar atau 1 video
+                                const conf = state.mediaConfigs && state.mediaConfigs.length > 0 ? state.mediaConfigs[0] : {zoom: 1, panX: 0, panY: 0};
                                 const finalW = dims.w * conf.zoom;
                                 const finalH = dims.h * conf.zoom;
                                 const offsetX = -finalW / 2 + conf.panX;
@@ -408,8 +415,12 @@
                     video.src = url;
                     video.loop = false; 
                     video.muted = true;
+                    // Supaya video boleh mula draw dengan cepat di background
+                    video.setAttribute('playsinline', '');
                     
-                    video.onloadedmetadata = () => setVideoDuration(video.duration);
+                    video.onloadedmetadata = () => {
+                        setVideoDuration(video.duration);
+                    };
                     video.ontimeupdate = () => setVideoCurrentTime(video.currentTime);
 
                     video.onended = () => {
@@ -426,6 +437,13 @@
                         const scale = Math.min(960 / video.videoWidth, 720 / video.videoHeight);
                         setMediaProps({ x: 480, y: 360, scale: scale });
                         setActiveLayer('media');
+                        // Paksa mainkan frame pertama supaya gambar tidak blank
+                        video.play().then(() => video.pause()).catch(e => console.log(e));
+                    };
+                    
+                    // Fallback error
+                    video.onerror = () => {
+                         alert("Ralat memuatkan video. Sila cuba video format MP4 yang lain.");
                     };
                 } else {
                     Promise.all(files.map(file => {
@@ -798,14 +816,14 @@
                                         className={`flex-1 min-w-[60px] text-xs py-2 rounded-md font-medium transition ${activeLayer === 'media' ? 'bg-white shadow text-gray-800' : 'text-gray-500'}`}
                                     >Media (Semua)</button>
                                     
-                                    {/* Butang kawalan Zoom untuk gambar yang dikolaj */}
-                                    {mediaElementsRef.current.map((_, index) => (
+                                    {/* Butang kawalan Zoom untuk gambar yang dikolaj atau single media */}
+                                    {mediaElementsRef.current.length > 0 && mediaElementsRef.current.map((_, index) => (
                                         <button 
                                             key={`media-${index}`}
                                             onClick={() => setActiveLayer(`media-${index}`)}
                                             className={`flex-1 min-w-[60px] text-xs py-2 rounded-md font-medium transition ${activeLayer === `media-${index}` ? 'bg-white shadow text-blue-700' : 'text-gray-500'}`}
                                         >
-                                            Gambar {index + 1}
+                                            Media {index + 1}
                                         </button>
                                     ))}
                                     
@@ -877,7 +895,7 @@
                                     {activeLayer.startsWith('media-') && (
                                         <div className="space-y-4 mt-2">
                                             <div>
-                                                <label className="flex justify-between text-xs text-blue-700 mb-1 font-semibold">Zoom Gambar {parseInt(activeLayer.split('-')[1]) + 1}</label>
+                                                <label className="flex justify-between text-xs text-blue-700 mb-1 font-semibold">Zoom Gambar/Media {parseInt(activeLayer.split('-')[1]) + 1}</label>
                                                 <input type="range" min="1" max="5" step="0.1" 
                                                     className="w-full accent-blue-600"
                                                     value={mediaConfigs[parseInt(activeLayer.split('-')[1])].zoom} 
