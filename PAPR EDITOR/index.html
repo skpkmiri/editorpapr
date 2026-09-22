@@ -210,15 +210,7 @@
                         ctx.shadowColor = 'rgba(0,0,0,0.8)';
                         ctx.shadowBlur = 8;
                         ctx.stroke();
-                        
-                        if (state.circles.length > 1) {
-                            ctx.fillStyle = '#ef4444';
-                            ctx.font = 'bold 20px Arial';
-                            ctx.textAlign = 'center';
-                            ctx.textBaseline = 'middle';
-                            const index = state.circles.indexOf(circle) + 1;
-                            ctx.fillText(index, circle.x, circle.y - circle.radius - 15);
-                        }
+                        // KEMASKINI: Nombor telah dibuang dari dalam bulatan
                         ctx.restore();
                     });
 
@@ -321,7 +313,12 @@
 
             const loadRecord = (rec) => {
                 if (mediaElementsRef.current[0] && mediaType === 'video') {
-                    mediaElementsRef.current[0].pause();
+                    // KEMASKINI: Buang video lama dari DOM dengan selamat
+                    const oldVid = mediaElementsRef.current[0];
+                    oldVid.pause();
+                    if (document.body.contains(oldVid)) {
+                        document.body.removeChild(oldVid);
+                    }
                     setIsPlaying(false);
                 }
                 setBgGradient(rec.bgGradient);
@@ -358,7 +355,12 @@
                     message: "Adakah anda pasti mahu set semula (reset) kanvas? Semua media yang tidak disimpan akan hilang.",
                     onConfirm: () => {
                         if (mediaElementsRef.current[0] && mediaType === 'video') {
-                            mediaElementsRef.current[0].pause();
+                            // KEMASKINI: Buang video lama dari DOM
+                            const oldVid = mediaElementsRef.current[0];
+                            oldVid.pause();
+                            if (document.body.contains(oldVid)) {
+                                document.body.removeChild(oldVid);
+                            }
                         }
                         setBgGradient(gradients[0].value);
                         setMediaType(null);
@@ -398,6 +400,17 @@
                 
                 setMediaConfigs(defaultMediaConfigs);
 
+                // KEMASKINI: Buang video lama dari DOM untuk bersihkan ingatan sekiranya ada
+                if (mediaElementsRef.current[0] && mediaElementsRef.current[0].tagName === 'VIDEO') {
+                    const oldVid = mediaElementsRef.current[0];
+                    oldVid.pause();
+                    oldVid.removeAttribute('src');
+                    oldVid.load();
+                    if (document.body.contains(oldVid)) {
+                        document.body.removeChild(oldVid);
+                    }
+                }
+
                 const hasVideo = files.some(f => f.type.startsWith('video/'));
 
                 if (hasVideo) {
@@ -410,6 +423,15 @@
                     video.muted = true;
                     video.setAttribute('playsinline', '');
                     
+                    // KEMASKINI: Masukkan ke dalam DOM secara tersembunyi supaya pelayar tidak menghentikan mainan (suspend process)
+                    video.style.position = 'absolute';
+                    video.style.opacity = '0';
+                    video.style.pointerEvents = 'none';
+                    video.style.width = '1px';
+                    video.style.height = '1px';
+                    video.style.zIndex = '-9999';
+                    document.body.appendChild(video);
+
                     video.onloadedmetadata = () => {
                         setVideoDuration(video.duration);
                     };
