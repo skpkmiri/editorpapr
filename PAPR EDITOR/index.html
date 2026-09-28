@@ -200,7 +200,7 @@
                         ctx.restore();
                     }
 
-                    // 3. Lukis Bulatan Fokus (Berbilang)
+                    // 3. Lukis Bulatan Fokus (Berbilang) - HIDE NOMBOR
                     state.circles.forEach(circle => {
                         ctx.save();
                         ctx.beginPath();
@@ -210,7 +210,9 @@
                         ctx.shadowColor = 'rgba(0,0,0,0.8)';
                         ctx.shadowBlur = 8;
                         ctx.stroke();
-                        // KEMASKINI: Nombor telah dibuang dari dalam bulatan
+                        
+                        // KOD LUKIS NOMBOR TELAH DIBUANG DARI SINI
+                        
                         ctx.restore();
                     });
 
@@ -313,12 +315,7 @@
 
             const loadRecord = (rec) => {
                 if (mediaElementsRef.current[0] && mediaType === 'video') {
-                    // KEMASKINI: Buang video lama dari DOM dengan selamat
-                    const oldVid = mediaElementsRef.current[0];
-                    oldVid.pause();
-                    if (document.body.contains(oldVid)) {
-                        document.body.removeChild(oldVid);
-                    }
+                    mediaElementsRef.current[0].pause();
                     setIsPlaying(false);
                 }
                 setBgGradient(rec.bgGradient);
@@ -355,12 +352,7 @@
                     message: "Adakah anda pasti mahu set semula (reset) kanvas? Semua media yang tidak disimpan akan hilang.",
                     onConfirm: () => {
                         if (mediaElementsRef.current[0] && mediaType === 'video') {
-                            // KEMASKINI: Buang video lama dari DOM
-                            const oldVid = mediaElementsRef.current[0];
-                            oldVid.pause();
-                            if (document.body.contains(oldVid)) {
-                                document.body.removeChild(oldVid);
-                            }
+                            mediaElementsRef.current[0].pause();
                         }
                         setBgGradient(gradients[0].value);
                         setMediaType(null);
@@ -400,17 +392,6 @@
                 
                 setMediaConfigs(defaultMediaConfigs);
 
-                // KEMASKINI: Buang video lama dari DOM untuk bersihkan ingatan sekiranya ada
-                if (mediaElementsRef.current[0] && mediaElementsRef.current[0].tagName === 'VIDEO') {
-                    const oldVid = mediaElementsRef.current[0];
-                    oldVid.pause();
-                    oldVid.removeAttribute('src');
-                    oldVid.load();
-                    if (document.body.contains(oldVid)) {
-                        document.body.removeChild(oldVid);
-                    }
-                }
-
                 const hasVideo = files.some(f => f.type.startsWith('video/'));
 
                 if (hasVideo) {
@@ -423,15 +404,6 @@
                     video.muted = true;
                     video.setAttribute('playsinline', '');
                     
-                    // KEMASKINI: Masukkan ke dalam DOM secara tersembunyi supaya pelayar tidak menghentikan mainan (suspend process)
-                    video.style.position = 'absolute';
-                    video.style.opacity = '0';
-                    video.style.pointerEvents = 'none';
-                    video.style.width = '1px';
-                    video.style.height = '1px';
-                    video.style.zIndex = '-9999';
-                    document.body.appendChild(video);
-
                     video.onloadedmetadata = () => {
                         setVideoDuration(video.duration);
                     };
@@ -617,10 +589,11 @@
                             const currentTotalSize = recordedChunksRef.current.reduce((acc, chunk) => acc + chunk.size, 0);
                             setRecordingSize(currentTotalSize);
                             
-                            if (currentTotalSize >= 1048576) {
+                            // Had saiz dinaikkan ke 5MB supaya boleh muat durasi 60 saat (720p)
+                            if (currentTotalSize >= 5242880) {
                                 if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
                                     mediaRecorderRef.current.stop();
-                                    setAlertMessage("Saiz rakaman 720p telah mencecah had maksimum 1MB. Rakaman dihentikan automatik.");
+                                    setAlertMessage("Saiz rakaman 720p telah mencecah had maksimum 5MB. Rakaman dihentikan automatik.");
                                 }
                             }
                         }
@@ -1059,7 +1032,7 @@
                                             </div>
                                             <div className="flex items-center gap-3 bg-gray-100 px-3 py-1 rounded-md text-gray-700">
                                                 <span className="flex items-center gap-1" title="Masa (Max 60s)"><Clock size={14}/> {recordingTime}s / 60s</span>
-                                                <span className="flex items-center gap-1" title="Saiz (Max 1MB)"><HardDrive size={14}/> {(recordingSize / 1024).toFixed(0)}KB / 1MB</span>
+                                                <span className="flex items-center gap-1" title="Saiz (Max 5MB)"><HardDrive size={14}/> {(recordingSize / 1024 / 1024).toFixed(2)}MB / 5MB</span>
                                             </div>
                                         </div>
                                     )}
